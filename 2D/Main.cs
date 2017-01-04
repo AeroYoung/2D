@@ -622,10 +622,12 @@ public class Main : IExtensionApplication
         List<Point3d> ps = new List<Point3d>();
         ps.Add(resPoint.Value);
 
-        //TubeJig jig = new TubeJig(p1);
-        //PromptResult resJig = editor.Drag(jig);
+        TubeJig jig = new TubeJig(ps);
+        PromptResult resJig = editor.Drag(jig);
 
-        //NetFunction.Add2BlockModelSpace(jig.results);
+        ps.Add(jig.tempPt);
+
+        NetFunction.Add2BlockModelSpace(jig.results);
     }
     
 

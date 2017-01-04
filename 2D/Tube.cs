@@ -25,13 +25,13 @@ class TubeJig : DrawJig
 {
     public DBObjectCollection results = new DBObjectCollection();
 
-    private List<Point3d> points = new List<Point3d>();
-        
-    public TubeJig(Point3d p)
+    private List<Point3d> ps = new List<Point3d>();
+
+    public Point3d tempPt = new Point3d();
+
+    public TubeJig(List<Point3d> ps)
     {
-        //仅传递参数
-        points.Add(p);
-        points.Add(p);
+        this.ps = ps;
     }
 
     protected override SamplerStatus Sampler(JigPrompts prompts)
@@ -52,31 +52,29 @@ class TubeJig : DrawJig
             | UserInputControls.NoNegativeResponseAccepted;
 
         //WCS
-        optJigPoint.BasePoint = points[0].TransformBy(mt);
+        optJigPoint.BasePoint = ps[ps.Count - 1].TransformBy(mt);
         optJigPoint.UseBasePoint = true;
 
         //用 AcquirePoint函数获枏拖拽得到的即时点
         PromptPointResult resJigPoint = prompts.AcquirePoint(optJigPoint);
         Point3d tempPt = resJigPoint.Value;
 
-        while(tempPt!=null && points[points.Count-1] != tempPt)
+        //拖拽完成
+        if (resJigPoint.Status == PromptStatus.Cancel)
+            return SamplerStatus.Cancel;
+        
+        if (ps[ps.Count-1] != tempPt)
         {
-            //拖拽完成
-            if (resJigPoint.Status == PromptStatus.Cancel)
-                return SamplerStatus.Cancel;
-
-            points.Add(tempPt);
-            //将wcs办转化为 ucs点
-            Point3d ucsPt2 = this.points[1].TransformBy(mt.Inverse());
+            List<Point3d> tempPs = new List<Point3d>(ps.ToArray());
+            tempPs.Add(tempPt);
+                      
             results.Clear();
-            for (int i = 0; i < points.Count; i++)
-            {
-                Circle circle = new Circle(points[i], new Vector3d(0, 0, 1), 50);
-                results.Add(circle);
-            }
 
-            resJigPoint = prompts.AcquirePoint(optJigPoint);
-            tempPt = resJigPoint.Value;
+            for (int i = 0; i < tempPs.Count; i++)
+            {
+                Circle circle = new Circle(tempPs[i], new Vector3d(0, 0, 1), 50);
+                results.Add(circle);
+            }            
         }
 
         return SamplerStatus.OK;
