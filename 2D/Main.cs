@@ -612,8 +612,10 @@ public class Main : IExtensionApplication
         Database acCurDb = doc.Database;
         Editor editor = doc.Editor;
 
-        Point3d p1 = NetFunction.Pick("第一个点");
-        
+        Point3d p1 = NetFunction.Pick("选择第一个点");
+        TubeJig jig = new TubeJig(p1);
+        PromptResult resJig = editor.Drag(jig);
+
     }
     //public void SimpleTube()
     //{

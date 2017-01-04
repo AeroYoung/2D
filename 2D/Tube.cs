@@ -26,8 +26,7 @@ class TubeJig : DrawJig
     public DBObjectCollection results = new DBObjectCollection();
 
     private List<Point3d> points = new List<Point3d>();
-
-    
+        
     public TubeJig(Point3d p)
     {
         //仅传递参数
@@ -60,12 +59,12 @@ class TubeJig : DrawJig
         PromptPointResult resJigPoint = prompts.AcquirePoint(optJigPoint);
         Point3d tempPt = resJigPoint.Value;
 
-        // 拖 拽 収 消
-        if (resJigPoint.Status == PromptStatus.Cancel)
-            return SamplerStatus.Cancel;
-
-        if (points[points.Count-1] != tempPt)
+        while(tempPt!=null && points[points.Count-1] != tempPt)
         {
+            //拖拽完成
+            if (resJigPoint.Status == PromptStatus.Cancel)
+                return SamplerStatus.OK;
+
             points.Add(tempPt);
             //将wcs办转化为 ucs点
             Point3d ucsPt2 = this.points[1].TransformBy(mt.Inverse());
@@ -75,7 +74,9 @@ class TubeJig : DrawJig
                 Circle circle = new Circle(points[i], new Vector3d(0, 0, 1), 50);
                 results.Add(circle);
             }
-            
+
+            resJigPoint = prompts.AcquirePoint(optJigPoint);
+            tempPt = resJigPoint.Value;
         }
 
         return SamplerStatus.OK;
