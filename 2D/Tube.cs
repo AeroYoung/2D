@@ -63,7 +63,7 @@ class TubeJig : DrawJig
         {
             //拖拽完成
             if (resJigPoint.Status == PromptStatus.Cancel)
-                return SamplerStatus.OK;
+                return SamplerStatus.Cancel;
 
             points.Add(tempPt);
             //将wcs办转化为 ucs点

@@ -612,26 +612,22 @@ public class Main : IExtensionApplication
         Database acCurDb = doc.Database;
         Editor editor = doc.Editor;
 
-        Point3d p1 = NetFunction.Pick("选择第一个点");
-        TubeJig jig = new TubeJig(p1);
-        PromptResult resJig = editor.Drag(jig);
+        PromptPointOptions optPoint = new PromptPointOptions("\n请选择第一个点:");
+        optPoint.AllowNone = true;//Enter
+        PromptPointResult resPoint = editor.GetPoint(optPoint);
 
+        if (resPoint.Status != PromptStatus.OK)//Esc
+            return;
+
+        List<Point3d> ps = new List<Point3d>();
+        ps.Add(resPoint.Value);
+
+        //TubeJig jig = new TubeJig(p1);
+        //PromptResult resJig = editor.Drag(jig);
+
+        //NetFunction.Add2BlockModelSpace(jig.results);
     }
-    //public void SimpleTube()
-    //{
-    //    Document doc = App.DocumentManager.MdiActiveDocument;
-    //    Database acCurDb = doc.Database;
-    //    Editor editor = doc.Editor;
-
-    //    Point3d p1 = NetFunction.Pick("第一个点");
-    //    TubeJig jig = new TubeJig(p1);
-    //    PromptResult resJig = editor.Drag(jig);
-    //    while (resJig.Status == PromptStatus.OK)
-    //    {
-    //        resJig = editor.Drag(jig);
-    //    }        
-    //    NetFunction.Add2BlockModelSpace(jig.results);
-    //}
+    
 
     public static int PointCompare(Point3d p1, Point3d p2)
     {
