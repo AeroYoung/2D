@@ -25,9 +25,11 @@ class TubeJig : DrawJig
 {
     public DBObjectCollection results = new DBObjectCollection();
 
-    private List<Point3d> ps = new List<Point3d>();
+    public List<Point3d> ps = new List<Point3d>();
 
     public Point3d tempPt = new Point3d();
+
+    public bool finish = false;
 
     public TubeJig(List<Point3d> ps)
     {
@@ -42,9 +44,11 @@ class TubeJig : DrawJig
         Matrix3d mt = editor.CurrentUserCoordinateSystem;
 
         //定义1个点拖拽交互类.
-        JigPromptPointOptions optJigPoint = new JigPromptPointOptions("选择下一个点");
+        JigPromptPointOptions optJigPoint = new JigPromptPointOptions("\n选择下一个点,或[完成(F)]");
+        optJigPoint.Keywords.Add("F");
+        optJigPoint.Keywords.Default = "F";
         optJigPoint.Cursor = CursorType.Crosshair;
-
+        
         //拖拽限制
         optJigPoint.UserInputControls =
             UserInputControls.Accept3dCoordinates
@@ -57,32 +61,55 @@ class TubeJig : DrawJig
 
         //用 AcquirePoint函数获枏拖拽得到的即时点
         PromptPointResult resJigPoint = prompts.AcquirePoint(optJigPoint);
-        Point3d tempPt = resJigPoint.Value;
+        tempPt = resJigPoint.Value;
 
-        //拖拽完成
+        Tolerance tolerance = new Tolerance(0.005, 0.005);
+        
+
         if (resJigPoint.Status == PromptStatus.Cancel)
-            return SamplerStatus.Cancel;
-
-        if (!ps[ps.Count - 1].to2d().IsEqualTo(tempPt.to2d(), new Tolerance(0.005, 0.005)))
         {
-            List<Point3d> tempPs = new List<Point3d>(ps.ToArray());
-            tempPs.Add(tempPt);
-
-            results.Clear();
-
-            for (int i = 0; i < tempPs.Count; i++)
+            return SamplerStatus.Cancel;
+        }
+        else if (resJigPoint.Status == PromptStatus.Keyword)
+        {
+            if (resJigPoint.StringResult == "F")
             {
-                Circle circle = new Circle(tempPs[i], new Vector3d(0, 0, 1), 50);
-                results.Add(circle);
+                this.finish = true;
+                return SamplerStatus.OK;
             }
+            else
+            {
+                return SamplerStatus.NoChange;
+            }
+        }
+        else if (resJigPoint.Status == PromptStatus.OK)
+        {
+            if (!ps[ps.Count - 1].to2d().IsEqualTo(tempPt.to2d(), tolerance))
+            {
+                List<Point3d> tempPs = new List<Point3d>(ps.ToArray());
+                tempPs.Add(tempPt);
 
-            return SamplerStatus.OK;
+                results.Clear();
+
+                for (int i = 0; i < tempPs.Count; i++)
+                {
+                    Circle circle = new Circle(tempPs[i], new Vector3d(0, 0, 1), 50);
+                    results.Add(circle);
+                }
+                this.finish = false;
+                return SamplerStatus.OK;
+            }
+            else
+            {
+                this.finish = false;
+                return SamplerStatus.NoChange;
+            }
         }
         else
         {
-            return SamplerStatus.NoChange;
+            this.finish = true;
+            return SamplerStatus.OK;
         }
-        
     }
 
     protected override bool WorldDraw(WorldDraw draw)

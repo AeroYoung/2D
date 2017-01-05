@@ -613,9 +613,7 @@ public class Main : IExtensionApplication
         Editor editor = doc.Editor;
 
         List<Point3d> ps = new List<Point3d>();
-
-        #region 第一个点
-
+        
         PromptPointOptions optPoint = new PromptPointOptions("\n请选择第一个点:");
         optPoint.AllowNone = true;//Enter
         PromptPointResult resPoint = editor.GetPoint(optPoint);
@@ -625,29 +623,17 @@ public class Main : IExtensionApplication
 
         TubeJig jig = new TubeJig(ps);
         PromptResult resJig = editor.Drag(jig);
+        
+        while (resJig.Status == PromptStatus.OK && jig.finish==false)
+        {
+            jig.ps.Add(jig.tempPt);
+            resJig = editor.Drag(jig);            
+        }
 
-        ps.Add(jig.tempPt);
-
-        #endregion
-
-        //optPoint = new PromptPointOptions("\n请选择下一个点，或按回车键提交:");
-        ////optPoint.AllowNone = true;//Enter
-        //resPoint = editor.GetPoint(optPoint);
-
-        //while (resPoint.Status == PromptStatus.OK)
-        //{
-        //    ps.Add(resPoint.Value);
-
-        //    jig = new TubeJig(ps);
-        //    resJig = editor.Drag(jig);
-
-        //    ps.Add(jig.tempPt);
-
-        //    resPoint = editor.GetPoint(optPoint);
-        //}
-
-        if(resJig.Status==PromptStatus.OK || resJig.Status==PromptStatus.None)
+        if (resJig.Status != PromptStatus.Cancel)
+        {
             NetFunction.Add2BlockModelSpace(jig.results);
+        }
     }
     
 
