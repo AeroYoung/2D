@@ -62,22 +62,27 @@ class TubeJig : DrawJig
         //拖拽完成
         if (resJigPoint.Status == PromptStatus.Cancel)
             return SamplerStatus.Cancel;
-        
-        if (ps[ps.Count-1] != tempPt)
+
+        if (!ps[ps.Count - 1].to2d().IsEqualTo(tempPt.to2d(), new Tolerance(0.005, 0.005)))
         {
             List<Point3d> tempPs = new List<Point3d>(ps.ToArray());
             tempPs.Add(tempPt);
-                      
+
             results.Clear();
 
             for (int i = 0; i < tempPs.Count; i++)
             {
                 Circle circle = new Circle(tempPs[i], new Vector3d(0, 0, 1), 50);
                 results.Add(circle);
-            }            
-        }
+            }
 
-        return SamplerStatus.OK;
+            return SamplerStatus.OK;
+        }
+        else
+        {
+            return SamplerStatus.NoChange;
+        }
+        
     }
 
     protected override bool WorldDraw(WorldDraw draw)

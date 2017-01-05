@@ -39,6 +39,8 @@ local.properties
 
 # User-specific files
 *.suo
+*.sln
+*.VC.db
 *.user
 *.sln.docstates
 
