@@ -24,11 +24,8 @@ using Autodesk.AutoCAD.GraphicsInterface;
 class TubeJig : DrawJig
 {
     public DBObjectCollection results = new DBObjectCollection();
-
     public List<Point3d> ps = new List<Point3d>();
-
     public Point3d tempPt = new Point3d();
-
     public bool finish = false;
 
     public TubeJig(List<Point3d> ps)
@@ -44,7 +41,8 @@ class TubeJig : DrawJig
         Matrix3d mt = editor.CurrentUserCoordinateSystem;
 
         //定义1个点拖拽交互类.
-        JigPromptPointOptions optJigPoint = new JigPromptPointOptions("\n选择下一个点,或[完成(F)]");
+        JigPromptPointOptions optJigPoint = new JigPromptPointOptions(
+            "\n选择下一个点,或[完成(F)]");
         optJigPoint.Keywords.Add("F");
         optJigPoint.Keywords.Default = "F";
         optJigPoint.Cursor = CursorType.Crosshair;
@@ -62,10 +60,7 @@ class TubeJig : DrawJig
         //用 AcquirePoint函数获枏拖拽得到的即时点
         PromptPointResult resJigPoint = prompts.AcquirePoint(optJigPoint);
         tempPt = resJigPoint.Value;
-
-        Tolerance tolerance = new Tolerance(0.005, 0.005);
         
-
         if (resJigPoint.Status == PromptStatus.Cancel)
         {
             return SamplerStatus.Cancel;
@@ -84,26 +79,7 @@ class TubeJig : DrawJig
         }
         else if (resJigPoint.Status == PromptStatus.OK)
         {
-            if (!ps[ps.Count - 1].to2d().IsEqualTo(tempPt.to2d(), tolerance))
-            {
-                List<Point3d> tempPs = new List<Point3d>(ps.ToArray());
-                tempPs.Add(tempPt);
-
-                results.Clear();
-
-                for (int i = 0; i < tempPs.Count; i++)
-                {
-                    Circle circle = new Circle(tempPs[i], new Vector3d(0, 0, 1), 50);
-                    results.Add(circle);
-                }
-                this.finish = false;
-                return SamplerStatus.OK;
-            }
-            else
-            {
-                this.finish = false;
-                return SamplerStatus.NoChange;
-            }
+            return SamplerDraw();
         }
         else
         {
@@ -119,5 +95,48 @@ class TubeJig : DrawJig
             draw.Geometry.Draw(ent);
         }
         return true;
+    }
+
+    /// <summary>
+    /// 画图
+    /// </summary>
+    private SamplerStatus SamplerDraw()
+    {
+        Tolerance tolerance = new Tolerance(0.005, 0.005);
+        int count = ps.Count;
+
+        if (ps[count - 1].to2d().IsEqualTo(tempPt.to2d(), tolerance))
+        {
+            this.finish = false;
+            return SamplerStatus.NoChange;
+        }
+        // TODO 临时点不能在面域之中
+
+        results.Clear();
+
+        List<Point3d> tempPs = new List<Point3d>(ps.ToArray());
+        tempPs.Add(tempPt);
+        count = tempPs.Count;
+
+        #region 1. 线段
+
+        //1 中心线
+        List<Line> centerLine = new List<Line>();
+        for (int i = 0; i < count - 1; i++)
+        {
+            centerLine.Add(new Line(tempPs[i], tempPs[i + 1]));
+        }
+
+
+
+        #endregion
+
+        for (int i = 0; i < tempPs.Count; i++)
+        {
+            Circle circle = new Circle(tempPs[i], new Vector3d(0, 0, 1), 27.5);
+            results.Add(circle);
+        }
+        this.finish = false;
+        return SamplerStatus.OK;
     }
 }

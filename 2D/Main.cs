@@ -602,7 +602,7 @@ public class Main : IExtensionApplication
 
         newLines.Add2BlockModelSpace();
 
-        #endregion
+        
     }
 
     [CommandMethod("SimpleTube")]
@@ -635,7 +635,8 @@ public class Main : IExtensionApplication
             NetFunction.Add2BlockModelSpace(jig.results);
         }
     }
-    
+
+    #endregion
 
     public static int PointCompare(Point3d p1, Point3d p2)
     {
