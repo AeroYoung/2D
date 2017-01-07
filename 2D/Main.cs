@@ -951,6 +951,7 @@ public class Main : IExtensionApplication
     }
 
 }
+
 //用来响应按钮
 class AdskCommandHandler : ICommand
 {
