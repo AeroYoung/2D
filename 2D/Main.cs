@@ -221,6 +221,37 @@ public class Main : IExtensionApplication
 
         #endregion
 
+        #region 发热管Pannel
+
+        RibbonPanelSource pSource3 = new RibbonPanelSource();
+        pSource3.Name = "Panel3";
+        pSource3.Title = "3D设计";
+
+        //create the panel
+        RibbonPanel ribPanel3 = new RibbonPanel();
+        ribPanel3.Source = pSource3;
+        ribTab.Panels.Add(ribPanel3);
+
+        #region button SQL
+        RibbonButton btnSql = new RibbonButton();
+        btnSql.Text = "保存数据";
+        btnSql.ShowText = true;
+        btnSql.ToolTip = "保存图块数据到UG";
+        btnSql.ShowToolTipOnDisabled = true;
+        btnSql.IsToolTipEnabled = true;
+        btnSql.Size = RibbonItemSize.Large;
+        btnSql.LargeImage = LoadImage(_2D.Resource1.Screensharing_32px);
+        btnSql.Image = LoadImage(_2D.Resource1.Screensharing_16px);
+
+        btnSql.Orientation = System.Windows.Controls.Orientation.Vertical;
+        btnSql.CommandParameter = "Sql ";//后面必须有空格
+        btnSql.CommandHandler = new AdskCommandHandler();
+
+        pSource3.Items.Add(btnSql);
+        #endregion        
+
+        #endregion
+
         //set as active tab
         ribTab.IsActive = true;
 
@@ -281,7 +312,7 @@ public class Main : IExtensionApplication
     #region 右键菜单事件
     void ItemClick_sql(object sender, EventArgs e)
     {
-        //Sql();
+        Sql();
     }
 
     void ItemClick_init(object sender, EventArgs e)
@@ -467,6 +498,105 @@ public class Main : IExtensionApplication
         docLock.Dispose();
     }
 
+    [CommandMethod("Sql")]
+    public void Sql()
+    {
+        try
+        {
+            DocumentLock docLock = App.DocumentManager.MdiActiveDocument.LockDocument();
+            int error_nums = 0;
+            int warning_nums = 0;
+            List<string> error_messages = new List<string>();
+            List<string> warning_messages = new List<string>();
+            //List<NozzleIndex> nozzle_index = new List<NozzleIndex>();
+            //0——预操作 初始化
+            error_nums += CheckLayer(ref error_messages, ref warning_nums, ref warning_messages);
+            error_nums += CheckBlock(ref error_messages, ref warning_nums, ref warning_messages);
+
+            //1——获得当前文档和文件名 
+            Document acDoc = App.DocumentManager.MdiActiveDocument;
+            Database acCurDb = acDoc.Database;
+            DataControl sql = new DataControl();
+            String host_name = Dns.GetHostName();
+            String file_name = acDoc.Name;
+            file_name = file_name.Substring(file_name.LastIndexOf('\\') + 1);
+            file_name = file_name.Substring(0, file_name.LastIndexOf('.'));
+
+            //2——重复判断
+            String strSql = "select count(*) as Expr1 from block_table where host_name='" + host_name + "' and file_name='" + file_name + "'";
+            int count = sql.GetExpr1AsInt(strSql);
+            if (count > 1)
+            {
+                if (MessageBox.Show("已经存在相同记录，是否覆盖?", "提示", MessageBoxButtons.OKCancel) != DialogResult.OK)
+                    return;
+            }
+            strSql = "delete from block_table where host_name='" + host_name + "' and file_name='" + file_name + "'";
+            sql.dataExec(strSql);
+
+            //3——错误判断
+            if (error_nums > 0)
+            {
+                string err = "保存失败！点击确定按钮退出插件\n";
+                for (int i = 0; i < error_messages.Count; i++) err += error_messages[i] + "\n";
+                MessageBox.Show(err, "错误！", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            //4——保存图块数据
+            using (Transaction acTrans = acCurDb.TransactionManager.StartTransaction())
+            {
+                //2.1——以读模式打开Block表
+                BlockTable block_tables;
+                block_tables = acTrans.GetObject(acCurDb.BlockTableId, OpenMode.ForRead) as BlockTable;
+
+
+                //2.2——以读模式打开模型空间 BlockTable.ModelSpace
+                BlockTableRecord acBlkTblRec;
+                acBlkTblRec = acTrans.GetObject(block_tables[BlockTableRecord.ModelSpace],
+                                                    OpenMode.ForRead) as BlockTableRecord;
+
+                int index = 0;
+                //2.3——遍历模型空间ModelSpace
+                foreach (ObjectId acObjId in acBlkTblRec)
+                {
+                    //获得块参照
+                    if (acObjId.ObjectClass.DxfName != "INSERT") continue;
+                    BlockReference block_reference;
+                    block_reference = acTrans.GetObject(acObjId,
+                                                        OpenMode.ForRead) as BlockReference;
+
+                    WriteBlock2SQL(block_reference, index++, host_name, file_name, sql);
+                }
+            }
+
+            //5——警告信息  
+            CheckBlock2(host_name, file_name, "主射嘴", ref warning_messages);
+            CheckBlock2(host_name, file_name, "中心定位柱", ref warning_messages);
+            CheckBlock2(host_name, file_name, "定位销", ref warning_messages);
+            CheckBlock2(host_name, file_name, "热电偶", ref warning_messages);
+            CheckBlock2(host_name, file_name, "线架", ref warning_messages);
+            if (warning_messages.Count > 0)
+            {
+                string str = "保存成功，但有如下警告，点击确定按钮完成\n";
+                for (int i = 0; i < warning_messages.Count; i++) str += warning_messages[i] + "\n";
+                MessageBox.Show(str, "警告！", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+
+            }
+
+            acDoc.Editor.WriteMessage("\nCAD配置文件保存成功，有" + warning_messages.Count.ToString() + "个警告。\n");
+            //4——解锁 完事
+            docLock.Dispose();
+        }
+        catch (SystemException ex)
+        {
+            MessageBox.Show(ex.ToString());
+        }
+        catch (System.Exception ex)
+        {
+            MessageBox.Show(ex.ToString());
+        }
+    }
+
     [CommandMethod("ShortcutCommand")]
     public void ShortcutCommand()
     {
@@ -649,6 +779,177 @@ public class Main : IExtensionApplication
             retval = p2.X.CompareTo(p1.X);
         return retval;
     }
+
+    void WriteBlock2SQL(BlockReference block_reference, int index, String host_name, String file_name, DataControl sql)
+    {
+        try
+        {
+            String localdate = DateTime.Now.ToString("yyyyMMdd");
+            String strSql = "insert into block_table(assembly_id,X,Y,Angle,host_name,file_name,local_date,block_index) Values(";
+            strSql += "'" + block_reference.Name.Trim() + "',";
+            strSql += Math.Round(block_reference.Position.X, 4).ToString() + ",";
+            strSql += Math.Round(block_reference.Position.Y, 4).ToString() + ",";
+            strSql += Math.Round(block_reference.Rotation, 6).ToString() + ",";
+            strSql += "'" + host_name + "',";
+            strSql += "'" + file_name + "',";
+            strSql += localdate + ",";
+            strSql += index.ToString() + ")";
+            sql.dataExec(strSql);
+        }
+        catch (SystemException ex)
+        {
+            MessageBox.Show("保存数据的时候出错");
+            MessageBox.Show(ex.ToString());
+            return;
+        }
+    }
+
+    /// <summary>
+    /// 检查图层，将0图层设置为工作图层
+    /// </summary>
+    /// <param name="error_messages">错误信息列表</param>
+    /// <param name="warning_nums">警告数</param>
+    /// <param name="warning_messages">警告信息列表</param>
+    /// <returns>错误数</returns>
+    int CheckLayer(ref List<string> error_messages, ref int warning_nums, ref List<string> warning_messages)
+    {
+        try
+        {
+            int error_nums = 0;
+            Document doc = App.DocumentManager.MdiActiveDocument;
+            Database db = doc.Database;
+            Editor editor = doc.Editor;
+
+            using (Transaction trans = db.TransactionManager.StartTransaction())
+            {
+                error_nums += CheckLayer(trans, db, editor, "1manifold", ref error_messages, ref warning_nums, ref warning_messages);
+                error_nums += CheckLayer(trans, db, editor, "2runner", ref error_messages, ref warning_nums, ref warning_messages);
+                error_nums += CheckLayer(trans, db, editor, "1submanifold", ref error_messages, ref warning_nums, ref warning_messages);
+                error_nums += CheckLayer(trans, db, editor, "7gasline", ref error_messages, ref warning_nums, ref warning_messages);
+                error_nums += CheckLayer(trans, db, editor, "3heater", ref error_messages, ref warning_nums, ref warning_messages);
+                error_nums += CheckLayer(trans, db, editor, "wireframe", ref error_messages, ref warning_nums, ref warning_messages);
+
+                LayerTable layer_table = (LayerTable)trans.GetObject(db.LayerTableId, OpenMode.ForWrite);
+                trans.Commit();
+            }
+            return error_nums;
+        }
+        catch (Autodesk.AutoCAD.Runtime.Exception ex)
+        {
+            MessageBox.Show(ex.ToString());
+            return 0;
+        }
+    }
+
+    int CheckLayer(Transaction trans, Database db, Editor editor, string layerName, ref List<string> error_messages, ref int warning_nums, ref List<string> warning_messages)
+    {
+        try
+        {
+            int error_nums = 0;
+
+            LayerTable layer_table = (LayerTable)trans.GetObject(db.LayerTableId, OpenMode.ForRead);
+            if (!layer_table.Has(layerName))
+            {
+                error_nums++;
+                error_messages.Add("没有" + layerName + "图层");
+            }
+            else
+            {
+                LayerTableRecord ltr = trans.GetObject(layer_table[layerName],
+                                                       OpenMode.ForRead) as LayerTableRecord;
+                ObjectIdCollection ids = new ObjectIdCollection();
+                PromptSelectionResult ProSset = null;
+                TypedValue[] filList = new TypedValue[1] { new TypedValue((int)DxfCode.LayerName, layerName) };
+                SelectionFilter sfilter = new SelectionFilter(filList);
+                ProSset = editor.SelectAll(sfilter);
+                if (ProSset.Status == PromptStatus.OK)
+                {
+                    SelectionSet sst = ProSset.Value;
+                    ObjectId[] oids = sst.GetObjectIds();
+                    for (int i = 0; i < oids.Length; i++) ids.Add(oids[i]);
+                }
+                if (ids.Count == 0)
+                {
+                    warning_nums++;
+                    warning_messages.Add(layerName + "图层中没有数据！");
+                }
+            }
+
+            return error_nums;
+        }
+        catch (System.Exception ex)
+        {
+            MessageBox.Show(ex.ToString());
+            return 0;
+        }
+    }
+
+    /// <summary>
+    /// 检查图块，是否在asm图层中
+    /// </summary>
+    /// <param name="error_messages">错误信息列表</param>
+    /// <param name="warning_nums">警告数</param>
+    /// <param name="warning_messages">警告信息列表</param>
+    /// <returns>错误数</returns>
+    int CheckBlock(ref List<string> error_messages, ref int warning_nums, ref List<string> warning_messages)
+    {
+        int error_nums = 0;
+        string[] work_layers = { "1manifold", "1submanifold", "2runner", "7gasline", "3heater" };
+
+        //1——获得当前文档
+        Document doc = App.DocumentManager.MdiActiveDocument;
+        Database db = doc.Database;
+        Editor editor = doc.Editor;
+
+        using (Transaction acTrans = db.TransactionManager.StartTransaction())
+        {
+            //2.1——以读模式打开Block表
+            BlockTable block_tables;
+            block_tables = acTrans.GetObject(db.BlockTableId, OpenMode.ForRead) as BlockTable;
+
+            //2.2——以读模式打开模型空间 BlockTable.ModelSpace
+            BlockTableRecord acBlkTblRec;
+            acBlkTblRec = acTrans.GetObject(block_tables[BlockTableRecord.ModelSpace],
+                                                OpenMode.ForRead) as BlockTableRecord;
+
+            //2.3——遍历模型空间ModelSpace
+            foreach (ObjectId acObjId in acBlkTblRec)
+            {
+                //获得块参照
+                if (acObjId.ObjectClass.DxfName != "INSERT") continue;
+                BlockReference block_reference;
+                block_reference = acTrans.GetObject(acObjId,
+                                                    OpenMode.ForWrite) as BlockReference;
+                if (!work_layers.Contains(block_reference.Layer)) continue;
+                error_nums++;
+                error_messages.Add("图块" + block_reference.Name + "不能保存在" + block_reference.Layer + "图层中");
+                if (block_reference.Layer == "asm") continue;
+                warning_nums++;
+                warning_messages.Add("图块" + block_reference.Name + "应保存在asm图层中");
+            }
+        }
+
+        return error_nums;
+    }
+
+    void CheckBlock2(string host_name, string file_name, string assemblyName, ref List<string> warning_messages)
+    {
+        try
+        {
+            DataControl sql = new DataControl();
+            string strsql = "select count(*) as Expr1 from block_view where assembly_name='" + assemblyName + "'";
+            strsql += " AND host_name='" + host_name + "' AND file_name='" + file_name + "'";
+            int count = sql.GetExpr1AsInt(strsql);
+            if (count == 0) warning_messages.Add("缺少图块：" + assemblyName);
+        }
+        catch (SystemException ex)
+        {
+            MessageBox.Show("检查图块的时候出错");
+            MessageBox.Show(ex.ToString());
+            return;
+        }
+    }
+
 }
 //用来响应按钮
 class AdskCommandHandler : ICommand

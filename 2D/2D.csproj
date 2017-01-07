@@ -165,6 +165,12 @@
   <ItemGroup>
     <None Include="Resources\Return_32px.png" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Screensharing_16px.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Screensharing_32px.png" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>xcopy D:\0_CAD\UG\0_Project\IMS\Code\2D\2D\bin\Debug\2D.dll D:\0_CAD\UG\0_Project\IMS\Application /Y  /K</PostBuildEvent>
