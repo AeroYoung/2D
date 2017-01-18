@@ -31,7 +31,7 @@ class DataControl
     public DataControl()
     {
         strIMS = Environment.GetEnvironmentVariable("ugims");
-        String iniPath = strIMS + "\\StartUp\\IMS.ini";
+        String iniPath = strIMS + "\\StartUp\\BOM.ini";
         StringBuilder source = new StringBuilder(1024);
         StringBuilder user = new StringBuilder(1024);
         StringBuilder password = new StringBuilder(1024);
