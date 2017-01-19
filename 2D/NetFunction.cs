@@ -472,6 +472,8 @@ static class NetFunction
 
     #endregion
 
+    #region 编辑对象
+    
     /// <summary>
     /// 偏移直线
     /// </summary>
@@ -517,6 +519,8 @@ static class NetFunction
         }
         return results;
     }
+    
+    #endregion
 
     /// <summary>
     /// 所有曲线的端点
@@ -745,11 +749,31 @@ class ManifoldBuilder
         DBObjectCollection regionCollection = new DBObjectCollection();
 
         #region 创建临时边和临时面
-        foreach (Line aRunner in runner)
+        for(int k=0;k<runner.Count;k++)
         {
+            //延伸直线
+            Line line = new Line(runner[k].StartPoint, runner[k].EndPoint);
+            int start = 0;
+            int end = 0;
+            for (int j = 0; j < runner.Count; j++)
+            {
+                if (j == k) continue;
+                
+                if (Math.Abs(runner[j].to2d().GetDistanceTo(line.StartPoint.to2d()))<0.001)
+                {
+                    start = 1;
+                }
+                if (Math.Abs(runner[j].to2d().GetDistanceTo(line.EndPoint.to2d())) < 0.001)
+                {
+                    end = 1;
+                }
+            }
+            if (start == 0) line.StartPoint -= 55 / line.Length * line.Delta;
+            if (end == 0) line.EndPoint += 55 / line.Length * line.Delta;
+            
             //长边
-            DBObjectCollection objs1 = aRunner.GetOffsetCurves(35);
-            DBObjectCollection objs2 = aRunner.GetOffsetCurves(-35);
+            DBObjectCollection objs1 = line.GetOffsetCurves(35);
+            DBObjectCollection objs2 = line.GetOffsetCurves(-35);
 
             //短边
             List<Point3d> points1 = NetFunction.GetEndPoints(objs1);

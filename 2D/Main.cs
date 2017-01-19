@@ -780,6 +780,8 @@ public class Main : IExtensionApplication
         return retval;
     }
 
+    #region 保存图块
+
     void WriteBlock2SQL(BlockReference block_reference, int index, String host_name, String file_name, DataControl sql)
     {
         try
@@ -950,6 +952,7 @@ public class Main : IExtensionApplication
         }
     }
 
+    #endregion
 }
 
 //用来响应按钮
