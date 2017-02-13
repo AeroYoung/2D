@@ -81,6 +81,15 @@ namespace _2D {
         }
         
         /// <summary>
+        ///   查找类似 ims 的本地化字符串。
+        /// </summary>
+        internal static string Customer {
+            get {
+                return ResourceManager.GetString("Customer", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   查找 System.Drawing.Bitmap 类型的本地化资源。
         /// </summary>
         internal static System.Drawing.Bitmap DLL_16px {
