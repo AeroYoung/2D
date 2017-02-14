@@ -712,8 +712,20 @@ static class NetFunction
 
 class ManifoldBuilder
 {
-    private Manifold manifold;
+    #region 参数
 
+    private double insertLen = 55;//浇口到分流板壁面的距离
+
+    public double InsertLen { get { return insertLen; } set { insertLen = value; } }
+
+    private double width = 70;//分流板宽度
+
+    public double Width { get { return width; } set { width = value; } }
+
+    #endregion
+
+    private Manifold manifold;
+        
     private List<Line> runner = new List<Line>();
 
     public List<Line> Runner { get { return runner; } }
@@ -735,6 +747,9 @@ class ManifoldBuilder
         }
     }
     
+    /// <summary>
+    /// 分流板轮廓
+    /// </summary>
     public void SimpleManifoldContour2()
     {
         if (runner.Count == 0) return;
@@ -768,9 +783,120 @@ class ManifoldBuilder
                     end = 1;
                 }
             }
+            if (start == 0) line.StartPoint -= insertLen / line.Length * line.Delta;
+            if (end == 0) line.EndPoint += insertLen / line.Length * line.Delta;
+
+            //长边
+            DBObjectCollection objs1 = line.GetOffsetCurves(width / 2);
+            DBObjectCollection objs2 = line.GetOffsetCurves(-width / 2);
+
+            //短边
+            List<Point3d> points1 = NetFunction.GetEndPoints(objs1);
+            List<Point3d> points2 = NetFunction.GetEndPoints(objs2);
+
+            DBObjectCollection edges = NetFunction.CombineCollection(objs1, objs2);
+
+            foreach (Point3d p in points1)
+            {
+                for (int i = 0; i < points2.Count; i++)
+                {
+                    if (Math.Round(p.DistanceTo(points2[i]), 2) != width) continue;
+                    Line acLine = new Line(p, points2[i]);
+                    points2.RemoveAt(i);
+                    edges.Add(acLine);
+                }
+            }
+
+            //倒直角
+            DBObjectCollection chamfers = new DBObjectCollection();
+            for (int i = 0; i < edges.Count; i++)
+            {
+                for (int j = i + 1; j < edges.Count; j++)
+                {
+                    Line chamfer = NetFunction.Chamfer45((Line)(edges[i] as Entity),
+                        (Line)(edges[j] as Entity), 5);
+                    if (chamfer != null) chamfers.Add(chamfer);
+                }
+            }
+            edges = NetFunction.CombineCollection(edges, chamfers);
+
+            //面域
+            DBObjectCollection myRegionColl = Region.CreateFromCurves(edges);
+            Region acRegion = myRegionColl[0] as Region;
+            regionCollection.Add(acRegion);
+        }
+        #endregion
+
+        #region 完整面域
+        Region region = regionCollection[0] as Region;
+        for (int i = 1; i < regionCollection.Count; i++)
+        {
+            region.BooleanOperation(BooleanOperationType.BoolUnite,
+                regionCollection[i] as Region);
+        }
+
+        #endregion
+
+        #region 分解面域和倒圆角
+        DBObjectCollection acDBObjColl = new DBObjectCollection();
+        region.Explode(acDBObjColl);
+        
+        DBObjectCollection fillets = new DBObjectCollection();
+        for (int i = 0; i < acDBObjColl.Count; i++)
+        {
+            for (int j = i + 1; j < acDBObjColl.Count; j++)
+            {
+                Arc fillet = NetFunction.Fillet((Line)(acDBObjColl[i] as Entity),
+                    (Line)(acDBObjColl[j] as Entity), 15);
+                if (fillets != null) fillets.Add(fillet);
+            }
+        }
+        acDBObjColl = NetFunction.CombineCollection(acDBObjColl, fillets);
+        
+        #endregion
+
+        acDBObjColl.Add2BlockModelSpace();
+    }
+    
+    /// <summary>
+    /// 分流板假体轮廓
+    /// </summary>
+    public void SimpleSubManifoldContour()
+    {
+        if (runner.Count == 0) return;
+
+        DBObjectCollection results = new DBObjectCollection();
+        Document doc = App.DocumentManager.MdiActiveDocument;
+        Database acCurDb = doc.Database;
+        Editor editor = doc.Editor;
+        String targetLayer = "1submanifold";
+        NetFunction.SetCurrentLayer(targetLayer);
+
+        DBObjectCollection regionCollection = new DBObjectCollection();
+
+        #region 创建临时边和临时面
+        for (int k = 0; k < runner.Count; k++)
+        {
+            //延伸直线
+            Line line = new Line(runner[k].StartPoint, runner[k].EndPoint);
+            int start = 0;
+            int end = 0;
+            for (int j = 0; j < runner.Count; j++)
+            {
+                if (j == k) continue;
+
+                if (Math.Abs(runner[j].to2d().GetDistanceTo(line.StartPoint.to2d())) < 0.001)
+                {
+                    start = 1;
+                }
+                if (Math.Abs(runner[j].to2d().GetDistanceTo(line.EndPoint.to2d())) < 0.001)
+                {
+                    end = 1;
+                }
+            }
             if (start == 0) line.StartPoint -= 55 / line.Length * line.Delta;
             if (end == 0) line.EndPoint += 55 / line.Length * line.Delta;
-            
+
             //长边
             DBObjectCollection objs1 = line.GetOffsetCurves(35);
             DBObjectCollection objs2 = line.GetOffsetCurves(-35);
@@ -825,7 +951,7 @@ class ManifoldBuilder
         #region 分解面域和倒圆角
         DBObjectCollection acDBObjColl = new DBObjectCollection();
         region.Explode(acDBObjColl);
-        
+
         DBObjectCollection fillets = new DBObjectCollection();
         for (int i = 0; i < acDBObjColl.Count; i++)
         {
@@ -837,7 +963,7 @@ class ManifoldBuilder
             }
         }
         acDBObjColl = NetFunction.CombineCollection(acDBObjColl, fillets);
-        
+
         #endregion
 
         acDBObjColl.Add2BlockModelSpace();

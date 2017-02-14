@@ -36,7 +36,7 @@ class DataControl
         StringBuilder user = new StringBuilder(1024);
         StringBuilder password = new StringBuilder(1024);
         GetPrivateProfileString("data", "localhost", "10.15.1.61", source, 1024, iniPath);
-        strCon = "data source=" + source + "; Database=IMS;user id=sa; password=SAUCADCAM";
+        strCon = "data source=" + source + "; Database=BHRT;user id=sa; password=SAUCADCAM";
     }
 
     public int DataSelect(String strSql)
