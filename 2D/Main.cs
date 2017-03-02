@@ -35,7 +35,7 @@ public class Main : IExtensionApplication
 {
     #region 公共变量
     ContextMenuExtension context_menu = new ContextMenuExtension();
-    const string APP_NAME = "ugims";
+    const string APP_NAME = "ugBHRT";
     const int VERSION_NUMBER = 16123100;
     const string RIBBONID = "MYRIBBON";
     #endregion
@@ -340,7 +340,7 @@ public class Main : IExtensionApplication
         RegistryKey reg_cad_key = Registry.CurrentUser.OpenSubKey(root_key);
         RegistryKey reg_app_key = reg_cad_key.OpenSubKey("Applications", true);
 
-        //检查"ugims" 键的版本
+        //检查"ugBHRT" 键的版本
         string str_version = "0";
         int current_version = 0;
         string[] sub_keys = reg_app_key.GetSubKeyNames();
@@ -378,7 +378,7 @@ public class Main : IExtensionApplication
 
         reg_app_key.Close();
         reg_cad_key.Close();
-        App.ShowAlertDialog("IMS插件注册成功！\n" + "版本号：" + VERSION_NUMBER);
+        App.ShowAlertDialog("BHRT插件注册成功！\n" + "版本号：" + VERSION_NUMBER);
     }
 
     [CommandMethod("unRegApp")]
@@ -393,7 +393,7 @@ public class Main : IExtensionApplication
 
         App.RemoveDefaultContextMenuExtension(context_menu);
 
-        App.ShowAlertDialog("IMS插件卸载成功！");
+        App.ShowAlertDialog("BHRT插件卸载成功！");
     }
     #endregion
 
@@ -653,7 +653,7 @@ public class Main : IExtensionApplication
         Editor editor = doc.Editor;
 
         //插入块定义
-        string filePath = "D:\\0_CAD\\UG\\0_Project\\IMS\\Part_Base\\2D\\NozzleEar.dwg";
+        string filePath = "D:\\0_CAD\\UG\\0_Project\\BHRT\\Part_Base\\2D\\NozzleEar.dwg";
         string blockName = "NozzleEarBlock";
         acCurDb.ImportBlockFromDwg(filePath);
 

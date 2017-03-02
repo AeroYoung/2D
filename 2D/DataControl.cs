@@ -16,7 +16,7 @@ class DataControl
 {
     public DataSet dataSet;
     public String strCon;
-    public String strIMS;
+    public String strBHRT;
 
     #region API函数声明
     [DllImport("kernel32")]//返回0表示失败，非0为成功
@@ -30,8 +30,8 @@ class DataControl
 
     public DataControl()
     {
-        strIMS = Environment.GetEnvironmentVariable("ugims");
-        String iniPath = strIMS + "\\StartUp\\BOM.ini";
+        strBHRT = Environment.GetEnvironmentVariable("ugBHRT");
+        String iniPath = strBHRT + "\\StartUp\\BOM.ini";
         StringBuilder source = new StringBuilder(1024);
         StringBuilder user = new StringBuilder(1024);
         StringBuilder password = new StringBuilder(1024);

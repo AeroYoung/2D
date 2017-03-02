@@ -81,7 +81,7 @@ namespace _2D {
         }
         
         /// <summary>
-        ///   查找类似 ims 的本地化字符串。
+        ///   查找类似 BHRT 的本地化字符串。
         /// </summary>
         internal static string Customer {
             get {
